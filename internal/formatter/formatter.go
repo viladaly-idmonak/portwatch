@@ -32,23 +32,23 @@ func New(format string) (*Formatter, error) {
 	}
 }
 
+// formatEntry returns a single formatted line for a port event.
+func (f *Formatter) formatEntry(ts, event string, p scanner.Port) string {
+	if f.format == FormatJSON {
+		return fmt.Sprintf(`{"time":%q,"event":%q,"proto":%q,"port":%d}`+"\n", ts, event, p.Proto, p.Port)
+	}
+	return fmt.Sprintf("%s %s %s/%d\n", ts, strings.ToUpper(event), p.Proto, p.Port)
+}
+
 // FormatDiff returns a formatted string representing the diff at the given time.
 func (f *Formatter) FormatDiff(d scanner.Diff, t time.Time) string {
 	ts := t.Format(time.RFC3339)
 	var sb strings.Builder
 	for _, p := range d.Opened {
-		if f.format == FormatJSON {
-			sb.WriteString(fmt.Sprintf(`{"time":%q,"event":"opened","proto":%q,"port":%d}`+"\n", ts, p.Proto, p.Port))
-		} else {
-			sb.WriteString(fmt.Sprintf("%s OPENED %s/%d\n", ts, p.Proto, p.Port))
-		}
+		sb.WriteString(f.formatEntry(ts, "opened", p))
 	}
 	for _, p := range d.Closed {
-		if f.format == FormatJSON {
-			sb.WriteString(fmt.Sprintf(`{"time":%q,"event":"closed","proto":%q,"port":%d}`+"\n", ts, p.Proto, p.Port))
-		} else {
-			sb.WriteString(fmt.Sprintf("%s CLOSED %s/%d\n", ts, p.Proto, p.Port))
-		}
+		sb.WriteString(f.formatEntry(ts, "closed", p))
 	}
 	return sb.String()
 }
