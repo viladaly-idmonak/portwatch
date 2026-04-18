@@ -1,35 +1,37 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/user/port/portwatch/internal/scannerg, err := loadConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "config error: %v\n", err)
-		os.Exit(1)
+	"github.com/user/portwatch/internal/supervisor"
+g, err := loadConfig()
+	if err != nil : %v", err)
 	}
 
-	s := scanner.New(cfg.Protocol, cfg.Hosts)
-	l := logger.New(os.Stdout)
-	w := watcher.New(time.Duration(cfg.IntervalSecs)*time.Second, s, l)
+	logger := log.New(os.Stdout, "[portwatch] ", log.LstdFlags)
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	go func() {
-		<-sigs
-		w.Stop()
-	}()
+	w, err := watcher.New(cfg.Interval, cfg.Protocol, logger)
+	if err != nil {
+		log.Fatalf("watcher: %v", err)
+	}
 
-	fmt.Printf("portwatch starting (interval=%ds, protocol=%s, hosts=%v)\n",
-		cfg.IntervalSecs, cfg.Protocol, cfg.Hosts)
+	policy := supervisor.RestartPolicy{
+		MaxRetries: cfg.MaxRestarts,
+		Delay:      2 * time.Second,
+	}
+	sup := supervisor.New(policy, logger)
 
-	if err := w.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "watcher error: %v\n", err)
-		os.Exit(1)
+	if err := sup.Run(ctx, func(ctx context.Context) error {
+		return w.Run(ctx)
+	}); err != nil && err != context.Canceled {
+		log.Fatalf("fatal: %v", err)
 	}
 }
