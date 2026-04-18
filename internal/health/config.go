@@ -16,6 +16,15 @@ func DefaultConfig() Config {
 	}
 }
 
+// Validate checks that the Config fields are valid.
+// It returns an error if Enabled is true but Addr is empty after applying defaults.
+func (c *Config) Validate() error {
+	if c.Enabled && c.Addr == "" {
+		return fmt.Errorf("health: addr must not be empty when enabled")
+	}
+	return nil
+}
+
 // NewFromConfig constructs a Server from a Config.
 // Returns nil if the server is disabled.
 func NewFromConfig(cfg Config) *Server {
