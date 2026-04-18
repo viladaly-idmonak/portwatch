@@ -69,3 +69,12 @@ func TestFormatDiffEmptyIsEmpty(t *testing.T) {
 		t.Errorf("expected empty output for empty diff, got %q", out)
 	}
 }
+
+func TestFormatDiffJSONTimestamp(t *testing.T) {
+	f, _ := New("json")
+	d := scanner.Diff{Opened: []scanner.Port{{Proto: "tcp", Port: 22}}}
+	out := f.FormatDiff(d, fixedTime)
+	if !strings.Contains(out, "2024-01-15") {
+		t.Errorf("expected timestamp in JSON output, got %q", out)
+	}
+}
