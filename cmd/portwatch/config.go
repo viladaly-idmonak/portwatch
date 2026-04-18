@@ -1,48 +1,50 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
+	"fmt"
 	"os"
+	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
-// Config holds runtime configuration for portwatch.
 type Config struct {
-	Hosts        []string `json:"hosts"`
-	Protocol     string   `json:"protocol"`
-	IntervalSecs int      `json:"interval_secs"`
+	Interval    time.Duration `yaml:"interval"`
+	Protocols   []string      `yaml:"protocols"`
+	Include     []int         `yaml:"include"`
+	Exclude     []int         `yaml:"exclude"`
+	LogFile     string        `yaml:"log_file"`
+	Format      string        `yaml:"format"`
+	SnapshotPath string       `yaml:"snapshot_path"`
+	RateWindow  time.Duration `yaml:"rate_window"`
 }
 
-const defaultConfigPath = "portwatch.json"
-
-// loadConfig reads config from portwatch.json if present, otherwise returns defaults.
-func loadConfig() (*Config, error) {
+func loadConfig(path string) (*Config, error) {
 	cfg := &Config{
-		Hosts:        []string{"127.0.0.1"},
-		Protocol:     "tcp",
-		IntervalSecs: 5,
+		Interval:     2 * time.Second,
+		Protocols:    []string{"tcp", "udp"},
+		Format:       "text",
+		SnapshotPath: "",
+		RateWindow:   5 * time.Second,
 	}
-
-	f, err := os.Open(defaultConfigPath)
-	if errors.Is(err, os.ErrNotExist) {
+	if path == "" {
 		return cfg, nil
 	}
+	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			return cfg, nil
+		}
+		return nil, fmt.Errorf("open config: %w", err)
 	}
 	defer f.Close()
-
-	if err := json.NewDecoder(f).Decode(cfg); err != nil {
-		return nil, err
+	if err := yaml.NewDecoder(f).Decode(cfg); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
 	}
-	if len(cfg.Hosts) == 0 {
-		return nil, errors.New("config: hosts must not be empty")
-	}
-	if cfg.IntervalSecs <= 0 {
-		return nil, errors.New("config: interval_secs must be positive")
-	}
-	if cfg.Protocol != "tcp" && cfg.Protocol != "udp" {
-		return nil, errors.New("config: protocol must be tcp or udp")
+	for _, p := range cfg.Protocols {
+		if p != "tcp" && p != "udp" {
+			return nil, fmt.Errorf("invalid protocol %q: must be tcp or udp", p)
+		}
 	}
 	return cfg, nil
 }
