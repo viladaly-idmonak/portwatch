@@ -34,3 +34,9 @@ func NewFromConfig(cfg Config) (*Throttle, error) {
 	}
 	return New(cfg.Interval), nil
 }
+
+// WithInterval returns a copy of the Config with the given interval set.
+func (c Config) WithInterval(d time.Duration) Config {
+	c.Interval = d
+	return c
+}
