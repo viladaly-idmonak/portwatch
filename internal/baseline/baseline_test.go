@@ -85,3 +85,14 @@ func TestEmptyBaselineAllCurrentAreUnexpected(t *testing.T) {
 		t.Fatalf("expected unexpected=[22,80], got %v", got)
 	}
 }
+
+func TestBothUnexpectedAndMissing(t *testing.T) {
+	b := baseline.New([]uint16{80, 443})
+	u, m := b.Deviations(entries(80, 8080))
+	if len(u) != 1 || u[0] != 8080 {
+		t.Fatalf("expected unexpected=[8080], got %v", u)
+	}
+	if len(m) != 1 || m[0] != 443 {
+		t.Fatalf("expected missing=[443], got %v", m)
+	}
+}
