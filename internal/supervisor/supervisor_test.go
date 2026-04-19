@@ -81,3 +81,19 @@ func TestUnlimitedRetriesNegativeMax(t *testing.T) {
 		t.Fatalf("expected multiple retries, got %d", calls)
 	}
 }
+
+func TestWorkerZeroMaxRetries(t *testing.T) {
+	s := New(RestartPolicy{MaxRetries: 0, Delay: 0}, silent)
+	var calls int32
+	sentinel := errors.New("fail")
+	err := s.Run(context.Background(), func(ctx context.Context) error {
+		atomic.AddInt32(&calls, 1)
+		return sentinel
+	})
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("expected sentinel error, got %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected exactly 1 call with zero retries, got %d", calls)
+	}
+}
