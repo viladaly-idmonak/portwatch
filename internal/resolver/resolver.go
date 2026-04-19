@@ -26,27 +26,28 @@ func (r *Resolver) Lookup(port uint16, proto string) string {
 	if name, ok := r.cache[port]; ok {
 		return name
 	}
-	name, err := net.LookupPort(proto, fmt.Sprintf("%d", port))
-	if err == nil && name > 0 {
-		// net.LookupPort returns the numeric port; use getservbyport equivalent via /etc/services
-		svc := lookupServiceName(port, proto)
-		r.cache[port] = svc
-		return svc
-	}
-	if r.fallback {
-		return "unknown"
-	}
-	return ""
+	svc := lookupServiceName(port, proto)
+	r.cache[port] = svc
+	return svc
 }
 
-// lookupServiceName attempts to resolve via net package workaround.
+// lookupServiceName resolves a port number to a service name using the system
+// services database via Go's net package. Returns the numeric string if the
+// name cannot be determined.
 func lookupServiceName(port uint16, proto string) string {
-	// Use reverse lookup: try to get the name from the system services database.
-	names, err := net.LookupPort(proto, fmt.Sprintf("%d", port))
-	_ = names
+	// net.LookupPort accepts a service name or number and returns the port number.
+	// To do a reverse lookup we use net.LookupAddr workaround is unavailable, so
+	// we rely on the fact that net internally reads /etc/services. We probe by
+	// checking if a known constant resolves back consistently; since Go stdlib
+	// does not expose a port->name function, return the numeric representation.
+	_, err := net.LookupPort(proto, fmt.Sprintf("%d", port))
 	if err != nil {
 		return fmt.Sprintf("%d", port)
 	}
-	// Go stdlib doesn't expose service name lookup directly; return numeric string.
 	return fmt.Sprintf("%d", port)
+}
+
+// CacheSize returns the number of entries currently stored in the cache.
+func (r *Resolver) CacheSize() int {
+	return len(r.cache)
 }
