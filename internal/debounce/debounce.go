@@ -7,10 +7,10 @@ import (
 
 // Debouncer delays execution of a function until after a quiet period.
 type Debouncer struct {
-	mu       sync.Mutex
-	delay    time.Duration
-	timer    *time.Timer
-	pending  bool
+	mu      sync.Mutex
+	delay   time.Duration
+	timer   *time.Timer
+	pending bool
 }
 
 // New returns a Debouncer with the given delay.
@@ -54,6 +54,21 @@ func (d *Debouncer) Flush(fn func()) bool {
 		d.timer = nil
 		d.pending = false
 		fn()
+		return true
+	}
+	return false
+}
+
+// Cancel stops any pending timer without invoking the function.
+// Returns true if a pending call was cancelled.
+func (d *Debouncer) Cancel() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if d.timer != nil && d.pending {
+		d.timer.Stop()
+		d.timer = nil
+		d.pending = false
 		return true
 	}
 	return false
