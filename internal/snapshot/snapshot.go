@@ -3,51 +3,40 @@ package snapshot
 import (
 	"encoding/json"
 	"os"
-	"time"
-
-	"github.com/user/portwatch/internal/scanner"
+	"path/filepath"
 )
 
-// Snapshot holds a persisted port state with metadata.
-type Snapshot struct {
-	Timestamp time.Time        `json:"timestamp"`
-	Ports     []scanner.Port   `json:"ports"`
-}
-
-// Save writes the current port list to a JSON file at path.
-func Save(path string, ports []scanner.Port) error {
-	s := Snapshot{
-		Timestamp: time.Now().UTC(),
-		Ports:     ports,
-	}
-	f, err := os.CreateTemp("", "portwatch-snap-*.json")
+// Save atomically writes the port list to path.
+func Save(path string, ports []uint16) error {
+	data, err := json.Marshal(ports)
 	if err != nil {
 		return err
 	}
-	tmp := f.Name()
-	if err := json.NewEncoder(f).Encode(s); err != nil {
-		f.Close()
-		os.Remove(tmp)
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
 		return err
 	}
-	f.Close()
 	return os.Rename(tmp, path)
 }
 
-// Load reads a snapshot from path and returns the port list.
-// If the file does not exist, an empty slice is returned without error.
-func Load(path string) ([]scanner.Port, error) {
-	f, err := os.Open(path)
+// Load reads the port list from path. Returns an empty slice if the file does
+// not exist.
+func Load(path string) ([]uint16, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []scanner.Port{}, nil
+			return []uint16{}, nil
 		}
 		return nil, err
 	}
-	defer f.Close()
-	var s Snapshot
-	if err := json.NewDecoder(f).Decode(&s); err != nil {
+	var ports []uint16
+	if err := json.Unmarshal(data, &ports); err != nil {
 		return nil, err
 	}
-	return s.Ports, nil
+	return ports, nil
+}
+
+// Dir ensures the directory for path exists.
+func Dir(path string) error {
+	return os.MkdirAll(filepath.Dir(path), 0o755)
 }
