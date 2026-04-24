@@ -40,3 +40,11 @@ func NewFromConfig(c Config) (*Sampler, error) {
 	}
 	return New(c.Rate)
 }
+
+// String returns a human-readable description of the Config.
+func (c Config) String() string {
+	if !c.Enabled {
+		return "sampling disabled"
+	}
+	return fmt.Sprintf("sampling enabled at %.2f%% rate", c.Rate*100)
+}
