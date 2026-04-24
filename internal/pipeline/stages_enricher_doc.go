@@ -1,21 +1,15 @@
-// Package pipeline provides composable processing stages for port diff events.
+// Package pipeline provides a composable stage-based processing pipeline
+// for port activity diffs.
 //
-// # WithEnricher Stage
+// WithEnricher attaches static or dynamic metadata fields to each entry in a
+// scanner.Diff before passing it downstream. Fields are sourced from the
+// enricher.Enricher configuration and will not overwrite keys that already
+// exist in an entry's Meta map.
 //
-// WithEnricher attaches static key-value metadata fields to every entry in a
-// [scanner.Diff] using an [enricher.Enricher]. Fields are written into each
-// entry's Meta map, allowing downstream stages (formatters, alerters, audit
-// logs) to access host-level context such as environment, region, or cluster
-// without requiring each stage to perform its own lookup.
+// Typical usage:
 //
-// Existing Meta keys are NOT overwritten; the enricher only fills in keys that
-// are absent, preserving any values set by earlier pipeline stages.
-//
-// Example usage:
-//
-//	e, _ := enricher.NewFromConfig(cfg)
-//	p := pipeline.New(
+//	pipeline.New(
 //		pipeline.WithEnricher(e),
-//		pipeline.WithFormatter(f),
+//		pipeline.WithLogger(l),
 //	)
 package pipeline
