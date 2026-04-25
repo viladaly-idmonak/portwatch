@@ -66,6 +66,38 @@ func TestWithSamplingRateZeroBlocksAll(t *testing.T) {
 	}
 }
 
+// TestWithSamplingClosedEntriesRespectRate verifies that Closed entries in a diff
+// are also subject to sampling, ensuring consistent behaviour across both fields.
+func TestWithSamplingClosedEntriesRespectRate(t *testing.T) {
+	tests := []struct {
+		name        string
+		rate        float64
+		wantClosed  int
+	}{
+		{name: "rate-1.0 passes all closed", rate: 1.0, wantClosed: 2},
+		{name: "rate-0.0 drops all closed", rate: 0.0, wantClosed: 0},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := makeSampler(t, tc.rate)
+			stage := pipeline.WithSampling(s)
+
+			in := scanner.Diff{Closed: []scanner.Entry{
+				{Port: 80},
+				{Port: 443},
+			}}
+			out, err := stage(context.Background(), in)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(out.Closed) != tc.wantClosed {
+				t.Errorf("expected %d closed entries, got %d", tc.wantClosed, len(out.Closed))
+			}
+		})
+	}
+}
+
 // TestWithSamplingIntegratesWithPipeline verifies that WithSampling composes
 // correctly within a multi-stage pipeline and that context cancellation is
 // respected.
