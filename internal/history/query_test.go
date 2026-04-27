@@ -55,3 +55,14 @@ func TestQueryByProto(t *testing.T) {
 		t.Fatalf("expected 3, got %d", len(results))
 	}
 }
+
+func TestQueryByPortAndState(t *testing.T) {
+	h := seedHistory(t)
+	results := h.Query(Filter{Port: 80, State: "open"})
+	if len(results) != 1 {
+		t.Fatalf("expected 1, got %d", len(results))
+	}
+	if results[0].Port != 80 || results[0].State != "open" {
+		t.Fatalf("unexpected result: %+v", results[0])
+	}
+}
